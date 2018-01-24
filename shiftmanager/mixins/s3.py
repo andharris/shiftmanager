@@ -417,3 +417,110 @@ class S3Mixin(object):
         finally:
             if clean_up_s3:
                 bukkit.delete_keys(s3_sweep)
+
+    @check_s3_connection
+    def unload_table_to_s3(self, bucket, keypath, table,
+        col_str='*', to_json=True, options=None):
+        """
+        Given a table in Redshift, UNLOAD it to S3
+
+        Parameters
+        ----------
+        bucket : str
+            S3 bucket for writes
+        keypath : str
+            S3 key path for writes
+        table : str
+            Table name for UNLOAD
+        col_str : str
+            Comma separated string of columns to unload
+            Defaults to '*'
+        to_json: boolean
+            Defaults to True
+        options : str
+            Additional options to be included in UNLOAD command
+            Defaults to None and the following options are used:
+                - MANIFEST
+                - ENCRYPTED
+                - GZIP
+                - ADDQUOTES
+                - ESCAPE
+                - ALLOWOVERWRITE
+        """
+        s3_table_path = os.join.path(
+            bucket, keypath, table + '/')
+
+        if self.aws_role_name:
+            creds = "aws_iam_role={};".format(self.aws_role_name)
+        else:
+            creds = ("aws_access_key_id={};aws_secret_access_key={}"
+                     .format(self.aws_access_key_id,
+                             self.aws_secret_access_key))
+            if self.security_token:
+                creds += ';token={}'.format(self.security_token)
+        if not options:
+            options = """
+                MANIFEST
+                ENCRYPTED
+                GZIP
+                ADDQUOTES
+                ESCAPE
+                ALLOWOVERWRITE
+            """
+
+        if to_json:
+            columns_and_types = self._get_columns_and_types(table)
+            cols = self._json_col_str(columns_and_types)
+        else:
+            cols = col_str
+
+        statement = queries.unload_to_s3.format(
+            table=table, col_str=cols, s3_path=s3_table_path,
+            creds=creds, options=options)
+
+        print("Performing UNLOAD...")
+        self.execute(statement)
+
+    def _get_columns_and_types(self, table):
+        with self.connection as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                SELECT "column", "type" 
+                FROM pg_table_def 
+                WHERE tablename = '{table}'
+                """.format(table=table))
+                records = cur.fetchall()
+        return [row for row in records]
+
+    def _json_col_str(self, columns_and_types):
+        cases = [self._case_statement(col, col_type) 
+                 for col, col_type in columns_and_types]
+        return "'{'\n||" + "\n||\n".join(cases) + "\n||\n'}'" 
+
+    def _case_statement(self, col, col_type):
+        if col_type == 'boolean':
+            case = """
+            CASE
+                WHEN "{col}" IS NULL THEN '"{col}": null'
+                WHEN "{col}" THEN '"{col}": true'
+                ELSE '"{col}": false'
+            END"""
+        elif self._is_numeric(col_type):
+            case = """
+            CASE
+                WHEN "{col}" IS NULL THEN '"{col}": null'
+                ELSE '"{col}": ' || {col}
+            END"""
+        else:
+            case = """
+            CASE
+                WHEN "{col}" IS NULL THEN '"{col}": null'
+                ELSE '"{col}": "' || {col} || '"'
+            END"""
+        return case.format(col=col)
+
+    def _is_numeric(self, col_type):
+        no_quote_types = {'bigint', 'double precision', 'integer', 'numeric',
+                          'real', 'smallint'}
+        return any(no_quote_type in col_type 
+                   for no_quote_type in no_quote_types)

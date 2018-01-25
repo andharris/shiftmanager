@@ -469,7 +469,7 @@ class S3Mixin(object):
             """
 
         if to_json:
-            columns_and_types = self._get_columns_and_types(table)
+            columns_and_types = self._get_columns_and_types(table, col_str)
             cols = self._json_col_str(columns_and_types)
         else:
             cols = col_str
@@ -481,16 +481,18 @@ class S3Mixin(object):
         print("Performing UNLOAD...")
         self.execute(statement)
 
-    def _get_columns_and_types(self, table):
+    def _get_columns_and_types(self, table, col_str=None):
+        query = """
+        SELECT "column", "type" 
+        FROM pg_table_def 
+        WHERE tablename = '{table}'
+        """
+        if col_str != '*':
+            query += """AND "column" IN ({columns})""".format(columns=col_str)
         with self.connection as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                SELECT "column", "type" 
-                FROM pg_table_def 
-                WHERE tablename = '{table}'
-                """.format(table=table))
-                records = cur.fetchall()
-        return [row for row in records]
+                cur.execute(query.format(table=table))
+                return cur.fetchall()
 
     def _json_col_str(self, columns_and_types):
         cases = [self._case_statement(col, col_type) 

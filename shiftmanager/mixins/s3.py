@@ -440,12 +440,12 @@ class S3Mixin(object):
         options : str
             Additional options to be included in UNLOAD command
             Defaults to None and the following options are used:
-                - MANIFEST
-                - ENCRYPTED
-                - GZIP
-                - ADDQUOTES
-                - ESCAPE
-                - ALLOWOVERWRITE
+            - MANIFEST
+            - ENCRYPTED
+            - GZIP
+            - ADDQUOTES
+            - ESCAPE
+            - ALLOWOVERWRITE
         """
         s3_table_path = os.join.path(
             bucket, keypath, table + '/')
@@ -459,14 +459,7 @@ class S3Mixin(object):
             if self.security_token:
                 creds += ';token={}'.format(self.security_token)
         if not options:
-            options = """
-                MANIFEST
-                ENCRYPTED
-                GZIP
-                ADDQUOTES
-                ESCAPE
-                ALLOWOVERWRITE
-            """
+            options = "MANIFEST ENCRYPTED GZIP ADDQUOTES ESCAPE ALLOWOVERWRITE"
 
         if to_json:
             columns_and_types = self._get_columns_and_types(table, col_str)
@@ -474,9 +467,13 @@ class S3Mixin(object):
         else:
             cols = col_str
 
-        statement = queries.unload_to_s3.format(
-            table=table, col_str=cols, s3_path=s3_table_path,
-            creds=creds, options=options)
+        statement = """
+        UNLOAD (SELECT {col_str} FROM {table})
+        TO {s3_path}
+        CREDENTIALS '{creds}'
+        {options};
+        """.format(table=table, col_str=cols, s3_path=s3_table_path,
+                   creds=creds, options=options)
 
         print("Performing UNLOAD...")
         self.execute(statement)

@@ -10,15 +10,6 @@ JSON '{jpaths_key}'
 MANIFEST GZIP TIMEFORMAT 'auto'
 """
 
-unload_to_s3 = """\
-UNLOAD (
-    SELECT {col_str}
-    FROM {table}
-)
-TO {s3_path}
-CREDENTIALS '{creds}'
-{options};
-"""
 
 all_privileges = """\
 SELECT

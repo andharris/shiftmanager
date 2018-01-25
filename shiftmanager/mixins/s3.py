@@ -514,7 +514,7 @@ class S3Mixin(object):
             case = """
             CASE
                 WHEN "{col}" IS NULL THEN '"{col}": null'
-                ELSE '"{col}": "' || {col} || '"'
+                ELSE '"{col}": "' || TRANSLATE({col}, '"', '\"') || '"'
             END"""
         return case.format(col=col)
 

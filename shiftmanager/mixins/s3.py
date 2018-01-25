@@ -481,7 +481,7 @@ class S3Mixin(object):
         print("Performing UNLOAD...")
         self.execute(statement)
 
-    def _get_columns_and_types(self, table, col_str=None):
+    def _get_columns_and_types(self, table, col_str='*'):
         query = """
         SELECT "column", "type" 
         FROM pg_table_def 

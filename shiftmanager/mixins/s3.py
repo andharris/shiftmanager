@@ -419,8 +419,8 @@ class S3Mixin(object):
                 bukkit.delete_keys(s3_sweep)
 
     @check_s3_connection
-    def unload_table_to_s3(self, bucket, keypath, table,
-        col_str='*', to_json=True, options=None):
+    def unload_table_to_s3(self, bucket, keypath, table, col_str='*',
+                           to_json=True, options=None):
         """
         Given a table in Redshift, UNLOAD it to S3
 
@@ -483,8 +483,8 @@ class S3Mixin(object):
 
     def _get_columns_and_types(self, table, col_str='*'):
         query = """
-        SELECT "column", "type" 
-        FROM pg_table_def 
+        SELECT "column", "type"
+        FROM pg_table_def
         WHERE tablename = '{table}'
         """
         if col_str != '*':
@@ -495,9 +495,9 @@ class S3Mixin(object):
                 return cur.fetchall()
 
     def _json_col_str(self, columns_and_types):
-        cases = [self._case_statement(col, col_type) 
+        cases = [self._case_statement(col, col_type)
                  for col, col_type in columns_and_types]
-        return "'{'\n||" + "\n||\n".join(cases) + "\n||\n'}'" 
+        return "'{'\n||" + "\n||\n".join(cases) + "\n||\n'}'"
 
     def _case_statement(self, col, col_type):
         if col_type == 'boolean':
@@ -524,5 +524,5 @@ class S3Mixin(object):
     def _is_numeric(self, col_type):
         no_quote_types = {'bigint', 'double precision', 'integer', 'numeric',
                           'real', 'smallint'}
-        return any(no_quote_type in col_type 
+        return any(no_quote_type in col_type
                    for no_quote_type in no_quote_types)

@@ -196,34 +196,30 @@ def test_unload_table_to_s3(shift):
     keypath = 'tmp/tests/'
     table = 'foo_table'
 
-    expect_col_str = """'{'
-    ||
+    expect_col_str = r"""'{' ||
     CASE
         WHEN "foo" IS NULL THEN '"foo": null'
         WHEN "foo" THEN '"foo": true'
         ELSE '"foo": false'
-    END
-    ||
+    END || ', ' ||
     CASE
         WHEN "bar" IS NULL THEN '"bar": null'
         ELSE '"bar": ' || bar
-    END
-    ||
+    END || ', ' ||
     CASE
         WHEN "baz" IS NULL THEN '"baz": null'
-        ELSE '"baz": "' || REPLACE(REPLACE("baz", '\', '\\'),
-                                     '"', '\"') || '"'
-    END
-    ||
-    '}'"""
-    expect_s3_path = os.path.join(bucket, keypath, table + '/')
+        ELSE '"baz": "' || REPLACE(REPLACE("baz", '\\', '\\\\'),
+                                   '"', '\\"') || '"'
+    END || '}'
+    """
+    expect_s3_path = 's3://' + os.path.join(bucket, keypath, table + '/')
     expect_creds = ("aws_access_key_id={};aws_secret_access_key={};token={}"
                     .format("access_key", "secret_key", "security_token"))
-    expect_options = "MANIFEST ENCRYPTED GZIP ADDQUOTES ESCAPE ALLOWOVERWRITE"
+    expect_options = "MANIFEST GZIP ESCAPE ALLOWOVERWRITE"
 
     expected = """
-    UNLOAD (SELECT {col_str} FROM {table})
-    TO {s3_path}
+    UNLOAD ($$SELECT {col_str} FROM {table}$$)
+    TO '{s3_path}'
     CREDENTIALS '{creds}'
     {options};
     """.format(table=table, col_str=expect_col_str, s3_path=expect_s3_path,

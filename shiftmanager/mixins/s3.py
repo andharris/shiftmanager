@@ -441,13 +441,11 @@ class S3Mixin(object):
             Additional options to be included in UNLOAD command
             Defaults to None and the following options are used:
             - MANIFEST
-            - ENCRYPTED
             - GZIP
-            - ADDQUOTES
             - ESCAPE
             - ALLOWOVERWRITE
         """
-        s3_table_path = os.path.join(bucket, keypath, table + '/')
+        s3_table_path = 's3://' + os.path.join(bucket, keypath, table + '/')
 
         if self.aws_role_name:
             creds = "aws_iam_role={};".format(self.aws_role_name)
@@ -458,7 +456,7 @@ class S3Mixin(object):
             if self.security_token:
                 creds += ';token={}'.format(self.security_token)
         if not options:
-            options = "MANIFEST ENCRYPTED GZIP ADDQUOTES ESCAPE ALLOWOVERWRITE"
+            options = "MANIFEST GZIP ESCAPE ALLOWOVERWRITE"
 
         if to_json:
             columns_and_types = self._get_columns_and_types(table, col_str)
@@ -467,8 +465,8 @@ class S3Mixin(object):
             cols = col_str
 
         statement = """
-        UNLOAD (SELECT {col_str} FROM {table})
-        TO {s3_path}
+        UNLOAD ($$SELECT {col_str} FROM {table}$$)
+        TO '{s3_path}'
         CREDENTIALS '{creds}'
         {options};
         """.format(table=table, col_str=cols, s3_path=s3_table_path,
@@ -493,28 +491,28 @@ class S3Mixin(object):
     def _json_col_str(self, columns_and_types):
         cases = [self._case_statement(col, col_type)
                  for col, col_type in columns_and_types]
-        return "'{'\n||" + "\n||\n".join(cases) + "\n||\n'}'"
+        return "'{' || " + " || ', ' || ".join(cases) + " || '}'\n"
 
     def _case_statement(self, col, col_type):
         if col_type == 'boolean':
-            case = """
+            case = r"""
             CASE
                 WHEN "{col}" IS NULL THEN '"{col}": null'
                 WHEN "{col}" THEN '"{col}": true'
                 ELSE '"{col}": false'
             END"""
         elif self._is_numeric(col_type):
-            case = """
+            case = r"""
             CASE
                 WHEN "{col}" IS NULL THEN '"{col}": null'
                 ELSE '"{col}": ' || {col}
             END"""
         else:
-            case = """
+            case = r"""
             CASE
                 WHEN "{col}" IS NULL THEN '"{col}": null'
-                ELSE '"{col}": "' || REPLACE(REPLACE("{col}", '\', '\\'),
-                                             '"', '\"') || '"'
+                ELSE '"{col}": "' || REPLACE(REPLACE("{col}", '\\', '\\\\'),
+                                             '"', '\\"') || '"'
             END"""
         return case.format(col=col)
 

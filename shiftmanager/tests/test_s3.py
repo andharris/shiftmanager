@@ -211,7 +211,8 @@ def test_unload_table_to_s3(shift):
     ||
     CASE
         WHEN "baz" IS NULL THEN '"baz": null'
-        ELSE '"baz": "' || TRANSLATE("baz", '"', '\"') || '"'
+        ELSE '"baz": "' || REPLACE(REPLACE("baz", '\', '\\'),
+                                     '"', '\"') || '"'
     END
     ||
     '}'"""

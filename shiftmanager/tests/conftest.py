@@ -110,12 +110,14 @@ def id_cols(self, table_name):
     if table_name == 'my_identity_table':
         return {'id_col'}
 
+
 def columns_and_types(self, table, col_str='*'):
     return [
         ('foo', 'boolean'),
         ('bar', 'numeric(23,2)'),
         ('baz', 'character varying(256)')
     ]
+
 
 @pytest.fixture
 def shift(monkeypatch, mock_connection, mock_s3):

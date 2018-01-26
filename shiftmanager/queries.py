@@ -10,7 +10,6 @@ JSON '{jpaths_key}'
 MANIFEST GZIP TIMEFORMAT 'auto'
 """
 
-
 all_privileges = """\
 SELECT
   c.relkind,

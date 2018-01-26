@@ -447,8 +447,7 @@ class S3Mixin(object):
             - ESCAPE
             - ALLOWOVERWRITE
         """
-        s3_table_path = os.join.path(
-            bucket, keypath, table + '/')
+        s3_table_path = os.path.join(bucket, keypath, table + '/')
 
         if self.aws_role_name:
             creds = "aws_iam_role={};".format(self.aws_role_name)
@@ -514,7 +513,7 @@ class S3Mixin(object):
             case = """
             CASE
                 WHEN "{col}" IS NULL THEN '"{col}": null'
-                ELSE '"{col}": "' || TRANSLATE({col}, '"', '\"') || '"'
+                ELSE '"{col}": "' || TRANSLATE("{col}", '"', '\"') || '"'
             END"""
         return case.format(col=col)
 

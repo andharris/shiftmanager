@@ -437,7 +437,7 @@ class S3Mixin(object):
             Defaults to '*'
         where : str
             SQL where clause string to filter select statement in unload
-            Defaults to None
+            Defaults to None, meaning no WHERE clause is applied
         to_json: boolean
             Defaults to True
         options : str
@@ -469,11 +469,11 @@ class S3Mixin(object):
 
         select = "SELECT {col_str} FROM {table} ".format(
             col_str=cols, table=table)
-        if where:
+        if where is not None:
             select += where
 
         statement = """
-        UNLOAD ($$ {select} $$)
+        UNLOAD ($${select}$$)
         TO '{s3_path}'
         CREDENTIALS '{creds}'
         {options};

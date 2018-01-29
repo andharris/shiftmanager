@@ -218,7 +218,7 @@ def test_unload_table_to_s3(shift):
     expect_options = "MANIFEST GZIP ESCAPE ALLOWOVERWRITE"
 
     expected = """
-    UNLOAD ($$ SELECT {col_str} FROM {table} $$)
+    UNLOAD ($$SELECT {col_str} FROM {table}$$)
     TO '{s3_path}'
     CREDENTIALS '{creds}'
     {options};
